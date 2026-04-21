@@ -31,6 +31,11 @@ if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
  * Fast-path for --version has zero imports beyond this file.
  */
 async function main(): Promise<void> {
+  // Support `focus code` as a friendly spelling of `focus`.
+  if (process.argv[2] === 'code') {
+    process.argv = [process.argv[0]!, process.argv[1]!, ...process.argv.slice(3)];
+  }
+
   const args = process.argv.slice(2);
 
   // Fast-path for --version/-v: zero module loading needed

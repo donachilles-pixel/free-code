@@ -10,7 +10,7 @@ All telemetry stripped. All injected security-prompt guardrails removed. All exp
 curl -fsSL https://raw.githubusercontent.com/donachilles-pixel/free-code/main/install.sh | bash
 ```
 
-> Checks your system, installs Bun if needed, clones, builds with all features enabled, and puts `focus-code` on your PATH. Then just `export ANTHROPIC_API_KEY="sk-ant-..."` and run `focus-code`.
+> Checks your system, installs Bun if needed, clones, builds with all features enabled, and puts `focus-code` and `focus` on your PATH. Then just `export ANTHROPIC_API_KEY="sk-ant-..."` and run `focus-code` or `focus`.
 
 <p align="center">
   <img src="assets/screenshot.png" alt="Focus Code screenshot" width="800" />
@@ -75,12 +75,19 @@ See [FEATURES.md](FEATURES.md) for the full audit of all 88 flags and their stat
 curl -fsSL https://raw.githubusercontent.com/donachilles-pixel/free-code/main/install.sh | bash
 ```
 
-This will check your system, install Bun if needed, clone the repo, build the binary with all experimental features enabled, and symlink it as `focus-code` on your PATH.
+This will check your system, install Bun if needed, clone the repo, build the binary with all experimental features enabled, and symlink it as `focus-code` and `focus` on your PATH.
 
 After install, just run:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 focus-code
+```
+
+The short alias works too:
+
+```bash
+focus
+focus code
 ```
 
 ### Mascot
