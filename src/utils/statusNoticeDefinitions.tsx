@@ -8,6 +8,7 @@ import { relative } from 'path';
 import { formatNumber } from './format.js';
 import type { getGlobalConfig } from './config.js';
 import { getAnthropicApiKeyWithSource, getApiKeyFromConfigOrMacOSKeychain, getAuthTokenSource, isClaudeAISubscriber } from './auth.js';
+import { getAPIProvider } from './model/providers.js';
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js';
 import { getAgentDescriptionsTotalTokens, AGENT_DESCRIPTIONS_THRESHOLD } from './statusNoticeHelpers.js';
 import { isSupportedJetBrainsTerminal, toIDEDisplayName, getTerminalIdeType } from './ide.js';
@@ -54,6 +55,7 @@ const claudeAiSubscriberExternalTokenNotice: StatusNoticeDefinition = {
   id: 'claude-ai-external-token',
   type: 'warning',
   isActive: () => {
+    if (getAPIProvider() === 'kimi') return false;
     const authTokenInfo = getAuthTokenSource();
     return isClaudeAISubscriber() && (authTokenInfo.source === 'ANTHROPIC_AUTH_TOKEN' || authTokenInfo.source === 'apiKeyHelper');
   },
@@ -64,7 +66,7 @@ const claudeAiSubscriberExternalTokenNotice: StatusNoticeDefinition = {
         <Text color="warning">
           Auth conflict: Using {authTokenInfo.source} instead of Claude account
           subscription token. Either unset {authTokenInfo.source}, or run
-          `claude /logout`.
+          `focus /logout`.
         </Text>
       </Box>;
   }
@@ -73,6 +75,7 @@ const apiKeyConflictNotice: StatusNoticeDefinition = {
   id: 'api-key-conflict',
   type: 'warning',
   isActive: () => {
+    if (getAPIProvider() === 'kimi') return false;
     const {
       source: apiKeySource
     } = getAnthropicApiKeyWithSource({
@@ -90,7 +93,7 @@ const apiKeyConflictNotice: StatusNoticeDefinition = {
         <Text color="warning">{figures.warning}</Text>
         <Text color="warning">
           Auth conflict: Using {apiKeySource} instead of Anthropic Console key.
-          Either unset {apiKeySource}, or run `claude /logout`.
+          Either unset {apiKeySource}, or run `focus /logout`.
         </Text>
       </Box>;
   }
@@ -99,6 +102,7 @@ const bothAuthMethodsNotice: StatusNoticeDefinition = {
   id: 'both-auth-methods',
   type: 'warning',
   isActive: () => {
+    if (getAPIProvider() === 'kimi') return false;
     const {
       source: apiKeySource
     } = getAnthropicApiKeyWithSource({
@@ -127,11 +131,11 @@ const bothAuthMethodsNotice: StatusNoticeDefinition = {
             · Trying to use{' '}
             {authTokenInfo.source === 'claude.ai' ? 'claude.ai' : authTokenInfo.source}
             ?{' '}
-            {apiKeySource === 'ANTHROPIC_API_KEY' ? 'Unset the ANTHROPIC_API_KEY environment variable, or claude /logout then say "No" to the API key approval before login.' : apiKeySource === 'apiKeyHelper' ? 'Unset the apiKeyHelper setting.' : 'claude /logout'}
+            {apiKeySource === 'ANTHROPIC_API_KEY' ? 'Unset the ANTHROPIC_API_KEY environment variable, or focus /logout then say "No" to the API key approval before login.' : apiKeySource === 'apiKeyHelper' ? 'Unset the apiKeyHelper setting.' : 'focus /logout'}
           </Text>
           <Text color="warning">
             · Trying to use {apiKeySource}?{' '}
-            {authTokenInfo.source === 'claude.ai' ? 'claude /logout to sign out of claude.ai.' : `Unset the ${authTokenInfo.source} environment variable.`}
+            {authTokenInfo.source === 'claude.ai' ? 'focus /logout to sign out of claude.ai.' : `Unset the ${authTokenInfo.source} environment variable.`}
           </Text>
         </Box>
       </Box>;
