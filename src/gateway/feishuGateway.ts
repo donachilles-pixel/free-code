@@ -2,6 +2,9 @@ import { createServer, type Server } from 'http'
 import type { FocusGatewayConfig } from './config.js'
 import { FeishuClient, type FeishuSendTarget } from './feishuClient.js'
 
+type FeishuSdkModule = typeof import('@larksuiteoapi/node-sdk')
+type FeishuWsClient = InstanceType<FeishuSdkModule['WSClient']>
+
 type GatewayCallbacks = {
   onPrompt(text: string): void
   onInterrupt(): void
@@ -47,6 +50,25 @@ type FeishuEventBody = {
   type?: string
 }
 
+type FeishuMessageEvent = {
+  event_id?: string
+  token?: string
+  sender?: {
+    sender_id?: {
+      open_id?: string
+      user_id?: string
+      union_id?: string
+    }
+  }
+  message?: {
+    message_id?: string
+    chat_id?: string
+    chat_type?: string
+    message_type?: string
+    content?: string
+  }
+}
+
 const PERMISSION_REPLY_RE =
   /^\s*(y|yes|同意|批准|允许|n|no|否|拒绝|拒绝执行)\s+([a-km-z]{5})\s*$/i
 
@@ -80,6 +102,8 @@ function splitText(text: string, maxChars: number): string[] {
 export class FeishuGateway {
   private readonly client: FeishuClient
   private server: Server | undefined
+  private wsClient: FeishuWsClient | undefined
+  private running = false
   private callbacks: GatewayCallbacks | undefined
   private activeTarget: FeishuSendTarget | undefined
   private readonly seenMessageIds = new Set<string>()
@@ -101,7 +125,7 @@ export class FeishuGateway {
   }
 
   get isRunning(): boolean {
-    return this.server !== undefined
+    return this.running
   }
 
   get listenUrl(): string {
@@ -116,10 +140,39 @@ export class FeishuGateway {
     return this.config.sendTranscript
   }
 
+  get startupMessage(): string {
+    if (this.config.eventMode === 'websocket') {
+      return 'Feishu gateway started in SDK long-connection mode. No callback URL is required.'
+    }
+    return `Feishu gateway listening at ${this.listenUrl}. Configure Feishu callback URL as ${this.callbackUrl}.`
+  }
+
+  get statusMessage(): string {
+    if (this.config.eventMode === 'websocket') {
+      const reconnectInfo = this.wsClient?.getReconnectInfo()
+      const suffix = reconnectInfo?.nextConnectTime
+        ? ` Next reconnect: ${new Date(reconnectInfo.nextConnectTime).toLocaleString()}.`
+        : ''
+      return `[Focus Code gateway] running. Feishu SDK long-connection mode; no callback URL is required.${suffix}`
+    }
+    return `[Focus Code gateway] running. Callback URL: ${this.callbackUrl}`
+  }
+
   async start(callbacks: GatewayCallbacks): Promise<void> {
     this.callbacks = callbacks
-    if (this.server) return
+    if (this.running) return
 
+    if (this.config.eventMode === 'websocket') {
+      await this.startWebSocket()
+      this.running = true
+      return
+    }
+
+    await this.startCallbackServer()
+    this.running = true
+  }
+
+  private async startCallbackServer(): Promise<void> {
     this.server = createServer((request, response) => {
       void this.handleRequest(request, response).catch(error => {
         response.statusCode = 500
@@ -144,13 +197,45 @@ export class FeishuGateway {
     }
   }
 
+  private async startWebSocket(): Promise<void> {
+    const Lark = await import('@larksuiteoapi/node-sdk')
+    const logger = {
+      error: () => undefined,
+      warn: () => undefined,
+      info: () => undefined,
+      debug: () => undefined,
+      trace: () => undefined,
+    }
+    const eventDispatcher = new Lark.EventDispatcher({
+      logger,
+      loggerLevel: Lark.LoggerLevel.error,
+    }).register({
+      'im.message.receive_v1': async (data: FeishuMessageEvent) => {
+        await this.handleMessageEvent(data)
+      },
+    })
+    const wsClient = new Lark.WSClient({
+      appId: this.config.feishu.appId,
+      appSecret: this.config.feishu.appSecret,
+      logger,
+      loggerLevel: Lark.LoggerLevel.error,
+    })
+    this.wsClient = wsClient
+    await wsClient.start({ eventDispatcher })
+  }
+
   async stop(): Promise<void> {
     const server = this.server
+    const wsClient = this.wsClient
     this.server = undefined
+    this.wsClient = undefined
+    this.running = false
     this.callbacks = undefined
     this.pendingPermissionHandlers.clear()
-    if (!server) return
-    await new Promise<void>(resolve => server.close(() => resolve()))
+    wsClient?.close({ force: true })
+    if (server) {
+      await new Promise<void>(resolve => server.close(() => resolve()))
+    }
   }
 
   onPermissionResponse(
@@ -204,9 +289,9 @@ export class FeishuGateway {
     }
   }
 
-  private isAuthorized(body: FeishuEventBody): boolean {
-    const chatId = body.event?.message?.chat_id
-    const openId = body.event?.sender?.sender_id?.open_id
+  private isAuthorized(event: FeishuMessageEvent): boolean {
+    const chatId = event.message?.chat_id
+    const openId = event.sender?.sender_id?.open_id
     const { allowedChatIds, allowedOpenIds, chatId: configuredChatId } =
       this.config.feishu
 
@@ -284,14 +369,23 @@ export class FeishuGateway {
     }
 
     if (body.header?.event_type === 'im.message.receive_v1') {
-      await this.handleMessage(body)
+      await this.handleCallbackMessage(body)
     }
 
     response.end(JSON.stringify({ code: 0 }))
   }
 
-  private async handleMessage(body: FeishuEventBody): Promise<void> {
-    const message = body.event?.message
+  private async handleCallbackMessage(body: FeishuEventBody): Promise<void> {
+    await this.handleMessageEvent({
+      event_id: body.header?.event_id,
+      token: body.header?.token ?? body.token,
+      sender: body.event?.sender,
+      message: body.event?.message,
+    })
+  }
+
+  private async handleMessageEvent(event: FeishuMessageEvent): Promise<void> {
+    const message = event.message
     if (!message || message.message_type !== 'text') return
     if (message.message_id) {
       if (this.seenMessageIds.has(message.message_id)) return
@@ -301,7 +395,7 @@ export class FeishuGateway {
         if (first) this.seenMessageIds.delete(first)
       }
     }
-    if (!this.isAuthorized(body)) return
+    if (!this.isAuthorized(event)) return
 
     this.rememberChat(message.chat_id)
     const text = parseTextContent(message.content)
@@ -358,9 +452,7 @@ export class FeishuGateway {
         return true
       case '/status':
       case 'status':
-        this.sendText(
-          `[Focus Code gateway] running. Callback URL: ${this.callbackUrl}`,
-        )
+        this.sendText(this.statusMessage)
         return true
       case '/interrupt':
       case 'interrupt':

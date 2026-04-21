@@ -1,6 +1,7 @@
 import { isEnvTruthy } from '../utils/envUtils.js'
 
 export type FocusGatewayProvider = 'feishu'
+export type FocusGatewayEventMode = 'websocket' | 'callback'
 
 export type FeishuGatewayConfig = {
   appId: string
@@ -15,6 +16,7 @@ export type FeishuGatewayConfig = {
 
 export type FocusGatewayConfig = {
   provider: FocusGatewayProvider
+  eventMode: FocusGatewayEventMode
   host: string
   port: number
   path: string
@@ -78,6 +80,31 @@ function readReceiveIdType(): FeishuGatewayConfig['receiveIdType'] {
   }
 }
 
+function readEventMode(): FocusGatewayEventMode {
+  const value = (
+    readString('FOCUS_CODE_GATEWAY_EVENT_MODE') ??
+    readString('FOCUS_CODE_FEISHU_EVENT_MODE')
+  )?.toLowerCase()
+
+  switch (value) {
+    case 'callback':
+    case 'webhook':
+    case 'http':
+      return 'callback'
+    case 'websocket':
+    case 'ws':
+    case 'long_connection':
+    case 'long-connection':
+      return 'websocket'
+    default:
+      // Preserve old callback deployments that already export a public URL,
+      // while making new Feishu gateway sessions use SDK long connection mode.
+      return readString('FOCUS_CODE_GATEWAY_PUBLIC_URL')
+        ? 'callback'
+        : 'websocket'
+  }
+}
+
 export function isFocusGatewayRequested(): boolean {
   const provider = readString('FOCUS_CODE_GATEWAY')?.toLowerCase()
   return (
@@ -107,6 +134,7 @@ export function getFocusGatewayConfig(): FocusGatewayConfig | null {
 
   return {
     provider: 'feishu',
+    eventMode: readEventMode(),
     host: readString('FOCUS_CODE_GATEWAY_HOST') ?? DEFAULT_HOST,
     port: readNumber('FOCUS_CODE_GATEWAY_PORT', DEFAULT_PORT),
     path: normalizePath(readString('FOCUS_CODE_GATEWAY_PATH')),

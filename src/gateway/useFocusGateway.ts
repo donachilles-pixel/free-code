@@ -70,10 +70,7 @@ export function useFocusGateway({
         lastForwardedIndexRef.current = messagesLengthRef.current
         setMessages(prev => [
           ...prev,
-          createSystemMessage(
-            `Feishu gateway listening at ${gateway.listenUrl}. Configure Feishu callback URL as ${gateway.callbackUrl}.`,
-            'info',
-          ),
+          createSystemMessage(gateway.startupMessage, 'info'),
         ])
       })
       .catch(error => {
