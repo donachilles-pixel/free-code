@@ -83,6 +83,21 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 focus-code
 ```
 
+### Mascot
+
+Focus Code can replace the default startup mascot with a zodiac icon. Add this
+to `~/.claude/settings.json`:
+
+```json
+{
+  "mascot": "dragon"
+}
+```
+
+Available values are `default`, `rat`, `ox`, `tiger`, `rabbit`, `dragon`,
+`snake`, `horse`, `goat`, `monkey`, `rooster`, `dog`, and `pig`. You can also
+change this from `/config` with the `Mascot` setting.
+
 ### Kimi for Coding
 
 Kimi for Coding is supported through its Claude Code-compatible Anthropic

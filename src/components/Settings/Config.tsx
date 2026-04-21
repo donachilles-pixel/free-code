@@ -48,6 +48,7 @@ import { useSearchInput } from '../../hooks/useSearchInput.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, isFastModeAvailable, isFastModeEnabled, getFastModeModel, isFastModeSupportedByModel } from '../../utils/fastMode.js';
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen.js';
+import { getMascotDisplayName, getMascotIdFromDisplayName, MASCOT_DISPLAY_OPTIONS } from '../../utils/mascot.js';
 type Props = {
   onClose: (result?: string, options?: {
     display?: CommandResultDisplay;
@@ -654,6 +655,37 @@ export function Config({
     type: 'managedEnum',
     onChange: setTheme
   }, {
+    id: 'mascot',
+    label: 'Mascot',
+    value: getMascotDisplayName(settingsData?.mascot),
+    options: [...MASCOT_DISPLAY_OPTIONS],
+    type: 'enum' as const,
+    onChange(selectedMascot: string) {
+      const mascot = getMascotIdFromDisplayName(selectedMascot);
+      const storedMascot = mascot === 'default' ? undefined : mascot;
+      updateSettingsForSource('userSettings', {
+        mascot: storedMascot
+      });
+      setSettingsData(prev_28 => ({
+        ...prev_28,
+        mascot: storedMascot
+      }));
+      setAppState(prev_29 => ({
+        ...prev_29,
+        settings: {
+          ...prev_29.settings,
+          mascot: storedMascot
+        }
+      }));
+      setChanges(prev_30 => ({
+        ...prev_30,
+        Mascot: selectedMascot
+      }));
+      logEvent('tengu_mascot_setting_changed', {
+        mascot: mascot as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      });
+    }
+  }, {
     id: 'notifChannel',
     label: feature('KAIROS') || feature('KAIROS_PUSH_NOTIFICATION') ? 'Local notifications' : 'Notifications',
     value: globalConfig.preferredNotifChannel,
@@ -1204,6 +1236,7 @@ export function Config({
       autoUpdatesChannel: iu?.autoUpdatesChannel,
       minimumVersion: iu?.minimumVersion,
       language: iu?.language,
+      mascot: iu?.mascot,
       ...(feature('TRANSCRIPT_CLASSIFIER') ? {
         useAutoModeDuringPlan: (iu as {
           useAutoModeDuringPlan?: boolean;

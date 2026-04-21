@@ -2,10 +2,15 @@ import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { Box, Text, useTheme } from 'src/ink.js';
 import { env } from '../../utils/env.js';
+import { Mascot, useConfiguredMascotOption } from './Mascot.js';
 const WELCOME_V2_WIDTH = 58;
 export function WelcomeV2() {
   const $ = _c(35);
   const [theme] = useTheme();
+  const mascot = useConfiguredMascotOption();
+  if (mascot.id !== "default") {
+    return <Box width={WELCOME_V2_WIDTH} flexDirection="column" alignItems="center"><Text><Text color="startupAccent">{"Welcome to Focus Code"} </Text><Text dimColor={true}>v{MACRO.VERSION} </Text></Text><Box marginY={1}><Mascot /></Box></Box>;
+  }
   if (env.terminal === "Apple_Terminal") {
     let t0;
     if ($[0] !== theme) {

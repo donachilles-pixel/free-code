@@ -3,6 +3,7 @@ import { z } from 'zod/v4'
 import { SandboxSettingsSchema } from '../../entrypoints/sandboxTypes.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { lazySchema } from '../lazySchema.js'
+import { MASCOT_IDS } from '../mascot.js'
 import {
   EXTERNAL_PERMISSION_MODES,
   PERMISSION_MODES,
@@ -682,6 +683,12 @@ export const SettingsSchema = lazySchema(() =>
         .optional()
         .describe(
           'Override spinner tips. tips: array of tip strings. excludeDefault: if true, only show custom tips (default: false).',
+        ),
+      mascot: z
+        .enum(MASCOT_IDS)
+        .optional()
+        .describe(
+          'Startup mascot. Use "default" for Clawd, or one of the twelve zodiac icons: rat, ox, tiger, rabbit, dragon, snake, horse, goat, monkey, rooster, dog, pig.',
         ),
       syntaxHighlightingDisabled: z
         .boolean()
