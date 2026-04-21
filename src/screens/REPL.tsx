@@ -47,6 +47,7 @@ import { registerLeaderToolUseConfirmQueue, unregisterLeaderToolUseConfirmQueue,
 import { endInteractionSpan } from '../utils/telemetry/sessionTracing.js';
 import { useLogMessages } from '../hooks/useLogMessages.js';
 import { useReplBridge } from '../hooks/useReplBridge.js';
+import { useFocusGateway } from '../gateway/useFocusGateway.js';
 import { type Command, type CommandResultDisplay, type ResumeEntrypoint, getCommandName, isCommandEnabled } from '../commands.js';
 import type { PromptInputMode, QueuedCommand, VimMode } from '../types/textInputTypes.js';
 import { MessageSelector, selectableUserMessagesFilter, messagesAfterAreOnlySynthetic } from '../components/MessageSelector.js';
@@ -3837,6 +3838,12 @@ export function REPL({
     sendBridgeResult
   } = useReplBridge(messages, setMessages, abortControllerRef, commands, mainLoopModel);
   sendBridgeResultRef.current = sendBridgeResult;
+  useFocusGateway({
+    messages,
+    tools,
+    setMessages,
+    abortControllerRef
+  });
   useAfterFirstRender();
 
   // Track prompt queue usage for analytics. Fire once per transition from

@@ -1003,8 +1003,31 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').addOption(new Option('--gateway <provider>', 'Enable phone gateway provider for this session. Currently supported: feishu').choices(['feishu'])).addOption(new Option('--gateway-host <host>', 'Host for the gateway callback server').hideHelp()).addOption(new Option('--gateway-port <port>', 'Port for the gateway callback server').argParser(Number).hideHelp()).addOption(new Option('--gateway-path <path>', 'HTTP callback path for the gateway server').hideHelp()).addOption(new Option('--gateway-public-url <url>', 'Public callback URL configured in the phone gateway provider').hideHelp()).action(async (prompt, options) => {
     profileCheckpoint('action_handler_start');
+
+    const gatewayOptions = options as {
+      gateway?: string;
+      gatewayHost?: string;
+      gatewayPort?: number;
+      gatewayPath?: string;
+      gatewayPublicUrl?: string;
+    };
+    if (gatewayOptions.gateway) {
+      process.env.FOCUS_CODE_GATEWAY = gatewayOptions.gateway;
+    }
+    if (gatewayOptions.gatewayHost) {
+      process.env.FOCUS_CODE_GATEWAY_HOST = gatewayOptions.gatewayHost;
+    }
+    if (gatewayOptions.gatewayPort !== undefined) {
+      process.env.FOCUS_CODE_GATEWAY_PORT = String(gatewayOptions.gatewayPort);
+    }
+    if (gatewayOptions.gatewayPath) {
+      process.env.FOCUS_CODE_GATEWAY_PATH = gatewayOptions.gatewayPath;
+    }
+    if (gatewayOptions.gatewayPublicUrl) {
+      process.env.FOCUS_CODE_GATEWAY_PUBLIC_URL = gatewayOptions.gatewayPublicUrl;
+    }
 
     // --bare = one-switch minimal mode. Sets SIMPLE so all the existing
     // gates fire (CLAUDE.md, skills, hooks inside executeHooks, agent

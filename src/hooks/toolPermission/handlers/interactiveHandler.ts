@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
+import { getRunningFocusGateway } from '../../../gateway/index.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import { getAllowedChannels } from '../../../bootstrap/state.js'
 import type { BridgePermissionCallbacks } from '../../../bridge/bridgePermissionCallbacks.js'
@@ -74,11 +75,14 @@ function handleInteractivePermission(
   // remove the abort listener — not just the timer callback.
   let checkmarkAbortHandler: (() => void) | undefined
   const bridgeRequestId = bridgeCallbacks ? randomUUID() : undefined
+  const gateway = getRunningFocusGateway()
+  const gatewayRequestId = gateway ? shortRequestId(ctx.toolUseID) : undefined
   // Hoisted so local/hook/classifier wins can remove the pending channel
   // entry. No "tell remote to dismiss" equivalent — the text sits in your
   // phone, and a stale "yes abc123" after local-resolve falls through
   // tryConsumeReply (entry gone) and gets enqueued as normal chat.
   let channelUnsubscribe: (() => void) | undefined
+  let gatewayUnsubscribe: (() => void) | undefined
 
   const permissionPromptStartTimeMs = Date.now()
   const displayInput = result.updatedInput ?? ctx.input
@@ -144,6 +148,7 @@ function handleInteractivePermission(
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
       channelUnsubscribe?.()
+      gatewayUnsubscribe?.()
       ctx.logCancelled()
       ctx.logDecision(
         { decision: 'reject', source: { type: 'user_abort' } },
@@ -168,6 +173,7 @@ function handleInteractivePermission(
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
       channelUnsubscribe?.()
+      gatewayUnsubscribe?.()
 
       resolveOnce(
         await ctx.handleUserAllow(
@@ -191,6 +197,7 @@ function handleInteractivePermission(
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
       channelUnsubscribe?.()
+      gatewayUnsubscribe?.()
 
       ctx.logDecision(
         {
@@ -224,6 +231,7 @@ function handleInteractivePermission(
           bridgeCallbacks.cancelRequest(bridgeRequestId)
         }
         channelUnsubscribe?.()
+        gatewayUnsubscribe?.()
         ctx.removeFromQueue()
         ctx.logDecision({ decision: 'accept', source: 'config' })
         resolveOnce(ctx.buildAllow(freshResult.updatedInput ?? ctx.input))
@@ -262,6 +270,7 @@ function handleInteractivePermission(
         clearClassifierIndicator()
         ctx.removeFromQueue()
         channelUnsubscribe?.()
+        gatewayUnsubscribe?.()
 
         if (response.behavior === 'allow') {
           if (response.updatedPermissions?.length) {
@@ -295,6 +304,59 @@ function handleInteractivePermission(
     )
 
     signal.addEventListener('abort', unsubscribe, { once: true })
+  }
+
+  // Focus Code gateway relay (Feishu). This path is intentionally independent
+  // from BRIDGE/KAIROS gates so API-key and Kimi sessions can still approve
+  // local permission prompts from a phone.
+  if (gateway && gatewayRequestId) {
+    gateway.sendPermissionRequest({
+      requestId: gatewayRequestId,
+      toolName: ctx.tool.name,
+      description,
+      inputPreview: truncateForPreview(displayInput),
+    })
+
+    const gatewaySignal = ctx.toolUseContext.abortController.signal
+    const mapUnsub = gateway.onPermissionResponse(
+      gatewayRequestId,
+      response => {
+        if (!claim()) return
+        gatewayUnsubscribe?.()
+        clearClassifierChecking(ctx.toolUseID)
+        clearClassifierIndicator()
+        ctx.removeFromQueue()
+        channelUnsubscribe?.()
+        if (bridgeCallbacks && bridgeRequestId) {
+          bridgeCallbacks.cancelRequest(bridgeRequestId)
+        }
+
+        if (response.behavior === 'allow') {
+          ctx.logDecision(
+            {
+              decision: 'accept',
+              source: { type: 'user', permanent: false },
+            },
+            { permissionPromptStartTimeMs },
+          )
+          resolveOnce(ctx.buildAllow(displayInput))
+        } else {
+          ctx.logDecision(
+            {
+              decision: 'reject',
+              source: { type: 'user_reject', hasFeedback: false },
+            },
+            { permissionPromptStartTimeMs },
+          )
+          resolveOnce(ctx.cancelAndAbort(`Denied via ${response.from}`))
+        }
+      },
+    )
+    gatewayUnsubscribe = () => {
+      mapUnsub()
+      gatewaySignal.removeEventListener('abort', gatewayUnsubscribe!)
+    }
+    gatewaySignal.addEventListener('abort', gatewayUnsubscribe, { once: true })
   }
 
   // Channel permission relay — races alongside the bridge block above. Send a
@@ -372,6 +434,7 @@ function handleInteractivePermission(
           if (bridgeCallbacks && bridgeRequestId) {
             bridgeCallbacks.cancelRequest(bridgeRequestId)
           }
+          gatewayUnsubscribe?.()
 
           if (response.behavior === 'allow') {
             ctx.logDecision(
@@ -425,6 +488,7 @@ function handleInteractivePermission(
         bridgeCallbacks.cancelRequest(bridgeRequestId)
       }
       channelUnsubscribe?.()
+      gatewayUnsubscribe?.()
       ctx.removeFromQueue()
       resolveOnce(hookDecision)
     })()
@@ -457,6 +521,7 @@ function handleInteractivePermission(
             bridgeCallbacks.cancelRequest(bridgeRequestId)
           }
           channelUnsubscribe?.()
+          gatewayUnsubscribe?.()
           clearClassifierChecking(ctx.toolUseID)
 
           const matchedRule =

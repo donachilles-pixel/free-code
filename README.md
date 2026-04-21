@@ -122,6 +122,41 @@ You can override them with `KIMI_FOR_CODING_BASE_URL`,
 official Claude Code environment variables, `ANTHROPIC_BASE_URL` pointing at
 `https://api.kimi.com/coding/` is auto-detected as Kimi for Coding.
 
+### Feishu phone gateway
+
+Focus Code can run a local Feishu callback gateway so you can drive an active
+coding session from the Feishu mobile app. Incoming Feishu text is submitted as
+the next prompt, Focus Code replies are mirrored back to Feishu, and permission
+prompts are sent to Feishu with a short approval code.
+
+Create a Feishu app/bot, enable the `im.message.receive_v1` event, and point
+the event callback URL at your machine. For local development, expose the local
+port with a tunnel such as `ngrok` or `cloudflared`, then start Focus Code:
+
+```bash
+export FOCUS_CODE_GATEWAY=feishu
+export FOCUS_CODE_FEISHU_APP_ID="cli_..."
+export FOCUS_CODE_FEISHU_APP_SECRET="..."
+export FOCUS_CODE_FEISHU_VERIFICATION_TOKEN="..." # optional but recommended
+export FOCUS_CODE_FEISHU_CHAT_ID="oc_..."          # optional; learned from first inbound message if omitted
+export FOCUS_CODE_GATEWAY_PUBLIC_URL="https://your-tunnel.example/feishu/events"
+focus-code --gateway feishu --gateway-host 127.0.0.1 --gateway-port 8787
+```
+
+Configure Feishu's callback URL as
+`https://your-tunnel.example/feishu/events`. When Focus Code asks for tool
+permission, Feishu receives a message like `yes abcde` / `no abcde`; reply with
+one of those exact forms to approve or deny. You can also send `/interrupt`
+from Feishu to cancel the active request.
+
+Useful optional restrictions:
+
+```bash
+export FOCUS_CODE_FEISHU_ALLOWED_CHAT_IDS="oc_..."
+export FOCUS_CODE_FEISHU_ALLOWED_OPEN_IDS="ou_..."
+export FOCUS_CODE_GATEWAY_ALLOW_SLASH_COMMANDS=0
+```
+
 ---
 
 ## Requirements
