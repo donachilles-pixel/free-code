@@ -1,4 +1,4 @@
-# free-code
+# Focus Code
 
 > This public repository is an independently published fork of [paoloanzn/free-code](https://github.com/paoloanzn/free-code) and keeps that source attribution explicit here.
 
@@ -7,13 +7,13 @@
 All telemetry stripped. All injected security-prompt guardrails removed. All experimental features unlocked. One binary, zero callbacks home.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/win4r/free-code/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/donachilles-pixel/free-code/main/install.sh | bash
 ```
 
-> Checks your system, installs Bun if needed, clones, builds with all features enabled, and puts `free-code` on your PATH. Then just `export ANTHROPIC_API_KEY="sk-ant-..."` and run `free-code`.
+> Checks your system, installs Bun if needed, clones, builds with all features enabled, and puts `focus-code` on your PATH. Then just `export ANTHROPIC_API_KEY="sk-ant-..."` and run `focus-code`.
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="free-code screenshot" width="800" />
+  <img src="assets/screenshot.png" alt="Focus Code screenshot" width="800" />
 </p>
 
 ---
@@ -72,15 +72,15 @@ See [FEATURES.md](FEATURES.md) for the full audit of all 88 flags and their stat
 ## Quick install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/win4r/free-code/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/donachilles-pixel/free-code/main/install.sh | bash
 ```
 
-This will check your system, install Bun if needed, clone the repo, build the binary with all experimental features enabled, and symlink it as `free-code` on your PATH.
+This will check your system, install Bun if needed, clone the repo, build the binary with all experimental features enabled, and symlink it as `focus-code` on your PATH.
 
 After install, just run:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-free-code
+focus-code
 ```
 
 ### Kimi for Coding
@@ -92,7 +92,7 @@ Messages endpoint. This is not the Moonshot Open Platform API, so do not use
 ```bash
 export CLAUDE_CODE_USE_KIMI_FOR_CODING=1
 export KIMI_API_KEY="sk-kimi-..."
-free-code
+focus-code
 ```
 
 The built-in Kimi defaults are:
@@ -126,8 +126,8 @@ curl -fsSL https://bun.sh/install | bash
 
 ```bash
 # Clone the repo
-git clone https://github.com/win4r/free-code.git
-cd free-code
+git clone https://github.com/donachilles-pixel/free-code.git focus-code
+cd focus-code
 
 # Install dependencies
 bun install
