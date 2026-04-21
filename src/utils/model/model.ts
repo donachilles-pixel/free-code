@@ -24,6 +24,7 @@ import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import { getSettings_DEPRECATED } from '../settings/settings.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { getAPIProvider } from './providers.js'
+import { isKimiForCodingModel } from './kimiForCoding.js'
 import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { type ModelAlias, isModelAlias } from './aliases.js'
@@ -347,6 +348,10 @@ export function renderModelSetting(setting: ModelName | ModelAlias): string {
  * if the model is not recognized as a public model.
  */
 export function getPublicModelDisplayName(model: ModelName): string | null {
+  if (getAPIProvider() === 'kimi' && isKimiForCodingModel(model)) {
+    return 'Kimi for Coding'
+  }
+
   switch (model) {
     case getModelStrings().opus46:
       return 'Opus 4.6'
@@ -423,6 +428,10 @@ export function renderModelName(model: ModelName): string {
  * @returns "Claude {ModelName}" for public models, or "Claude ({model})" for non-public models
  */
 export function getPublicModelName(model: ModelName): string {
+  if (getAPIProvider() === 'kimi' && isKimiForCodingModel(model)) {
+    return 'Kimi for Coding'
+  }
+
   const publicName = getPublicModelDisplayName(model)
   if (publicName) {
     return `Claude ${publicName}`
@@ -568,6 +577,10 @@ export function modelDisplayString(model: ModelSetting): string {
 
 // @[MODEL LAUNCH]: Add a marketing name mapping for the new model below.
 export function getMarketingNameForModel(modelId: string): string | undefined {
+  if (getAPIProvider() === 'kimi' && isKimiForCodingModel(modelId)) {
+    return 'Kimi for Coding'
+  }
+
   if (getAPIProvider() === 'foundry') {
     // deployment ID is user-defined in Foundry, so it may have no relation to the actual model
     return undefined

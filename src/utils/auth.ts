@@ -112,10 +112,7 @@ export function isAnthropicAuthEnabled(): boolean {
     return !!process.env.CLAUDE_CODE_OAUTH_TOKEN
   }
 
-  const is3P =
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
+  const is3P = getAPIProvider() !== 'firstParty'
 
   // Check if user has configured an external API key source
   // This allows externally-provided API keys to work (without requiring proxy configuration)
@@ -207,6 +204,9 @@ export function getAuthTokenSource() {
 
 export type ApiKeySource =
   | 'ANTHROPIC_API_KEY'
+  | 'ANTHROPIC_AUTH_TOKEN'
+  | 'KIMI_FOR_CODING_API_KEY'
+  | 'KIMI_API_KEY'
   | 'apiKeyHelper'
   | '/login managed key'
   | 'none'
@@ -245,6 +245,24 @@ export function getAnthropicApiKeyWithSource(
       }
     }
     return { key: null, source: 'none' }
+  }
+
+  if (getAPIProvider() === 'kimi') {
+    if (process.env.KIMI_FOR_CODING_API_KEY) {
+      return {
+        key: process.env.KIMI_FOR_CODING_API_KEY,
+        source: 'KIMI_FOR_CODING_API_KEY',
+      }
+    }
+    if (process.env.KIMI_API_KEY) {
+      return { key: process.env.KIMI_API_KEY, source: 'KIMI_API_KEY' }
+    }
+    if (process.env.ANTHROPIC_AUTH_TOKEN) {
+      return {
+        key: process.env.ANTHROPIC_AUTH_TOKEN,
+        source: 'ANTHROPIC_AUTH_TOKEN',
+      }
+    }
   }
 
   // On homespace, don't use ANTHROPIC_API_KEY (use Console key instead)
@@ -1590,12 +1608,8 @@ export function is1PApiCustomer(): boolean {
   // 3. AWS Bedrock users
   // 4. Foundry users
 
-  // Exclude Vertex, Bedrock, and Foundry customers
-  if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
-  ) {
+  // Exclude third-party provider customers.
+  if (getAPIProvider() !== 'firstParty') {
     return false
   }
 
@@ -1728,13 +1742,9 @@ export function getSubscriptionName(): string {
   }
 }
 
-/** Check if using third-party services (Bedrock or Vertex or Foundry) */
+/** Check if using third-party services (Bedrock, Vertex, Foundry, or Kimi). */
 export function isUsing3PServices(): boolean {
-  return !!(
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
-  )
+  return getAPIProvider() !== 'firstParty'
 }
 
 /**

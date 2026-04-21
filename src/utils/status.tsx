@@ -11,6 +11,7 @@ import { getDisplayPath } from './file.js';
 import { formatNumber } from './format.js';
 import { getIdeClientName, type IDEExtensionInstallationStatus, isJetBrainsIde, toIDEDisplayName } from './ide.js';
 import { getClaudeAiUserDefaultModelDescription, modelDisplayString } from './model/model.js';
+import { getKimiForCodingBaseURL } from './model/kimiForCoding.js';
 import { getAPIProvider } from './model/providers.js';
 import { getMTLSConfig } from './mtls.js';
 import { checkInstall } from './nativeInstaller/index.js';
@@ -244,7 +245,8 @@ export function buildAPIProviderProperties(): Property[] {
     const providerLabel = {
       bedrock: 'AWS Bedrock',
       vertex: 'Google Vertex AI',
-      foundry: 'Microsoft Foundry'
+      foundry: 'Microsoft Foundry',
+      kimi: 'Kimi for Coding'
     }[apiProvider];
     properties.push({
       label: 'API provider',
@@ -320,6 +322,11 @@ export function buildAPIProviderProperties(): Property[] {
         value: 'Microsoft Foundry auth skipped'
       });
     }
+  } else if (apiProvider === 'kimi') {
+    properties.push({
+      label: 'Kimi for Coding base URL',
+      value: getKimiForCodingBaseURL()
+    });
   }
   const proxyUrl = getProxyUrl();
   if (proxyUrl) {

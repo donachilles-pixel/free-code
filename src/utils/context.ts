@@ -4,6 +4,11 @@ import { getGlobalConfig } from './config.js'
 import { isEnvTruthy } from './envUtils.js'
 import { getCanonicalName } from './model/model.js'
 import { getModelCapability } from './model/modelCapabilities.js'
+import {
+  KIMI_FOR_CODING_CONTEXT_WINDOW,
+  KIMI_FOR_CODING_MAX_OUTPUT_TOKENS,
+  isKimiForCodingModel,
+} from './model/kimiForCoding.js'
 
 // Model context window size (200k tokens for all models right now)
 export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
@@ -52,6 +57,10 @@ export function getContextWindowForModel(
   model: string,
   betas?: string[],
 ): number {
+  if (isKimiForCodingModel(model)) {
+    return KIMI_FOR_CODING_CONTEXT_WINDOW
+  }
+
   // Allow override via environment variable (ant-only)
   // This takes precedence over all other context window resolution, including 1M detection,
   // so users can cap the effective context window for local decisions (auto-compact, etc.)
@@ -164,7 +173,10 @@ export function getModelMaxOutputTokens(model: string): {
 
   const m = getCanonicalName(model)
 
-  if (m.includes('opus-4-6')) {
+  if (isKimiForCodingModel(model)) {
+    defaultTokens = KIMI_FOR_CODING_MAX_OUTPUT_TOKENS
+    upperLimit = KIMI_FOR_CODING_MAX_OUTPUT_TOKENS
+  } else if (m.includes('opus-4-6')) {
     defaultTokens = 64_000
     upperLimit = 128_000
   } else if (m.includes('sonnet-4-6')) {

@@ -32,6 +32,7 @@ import {
 } from './model.js'
 import { has1mContext } from '../context.js'
 import { getGlobalConfig } from '../config.js'
+import { getKimiForCodingModel } from './kimiForCoding.js'
 
 // @[MODEL LAUNCH]: Update all the available and default model option strings below.
 
@@ -266,9 +267,23 @@ function getOpusPlanOption(): ModelOption {
   }
 }
 
+function getKimiForCodingOption(): ModelOption {
+  const model = getKimiForCodingModel()
+  return {
+    value: model,
+    label: 'Kimi for Coding',
+    description: 'Kimi for Coding via Kimi Code API · 256K context',
+    descriptionForModel: `Kimi for Coding (${model})`,
+  }
+}
+
 // @[MODEL LAUNCH]: Update the model picker lists below to include/reorder options for the new model.
 // Each user tier (ant, Max/Team Premium, Pro/Team Standard/Enterprise, PAYG 1P, PAYG 3P) has its own list.
 function getModelOptionsBase(fastMode = false): ModelOption[] {
+  if (getAPIProvider() === 'kimi') {
+    return [getDefaultOptionForUser(fastMode), getKimiForCodingOption()]
+  }
+
   if (process.env.USER_TYPE === 'ant') {
     // Build options from antModels config
     const antModelOptions: ModelOption[] = getAntModels().map(m => ({

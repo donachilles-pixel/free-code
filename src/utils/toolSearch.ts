@@ -184,6 +184,13 @@ export function getToolSearchMode(): ToolSearchMode {
 
   const value = process.env.ENABLE_TOOL_SEARCH
 
+  // Kimi for Coding's Claude Code compatibility endpoint can reject
+  // tool_reference/tool_search beta shapes. Keep the default conservative, while
+  // still allowing users to opt in with ENABLE_TOOL_SEARCH=true or auto:N.
+  if (getAPIProvider() === 'kimi' && !value) {
+    return 'standard'
+  }
+
   // Handle auto:N syntax - check edge cases first
   const autoPercent = value ? parseAutoPercentage(value) : null
   if (autoPercent === 0) return 'tst' // auto:0 = always enabled

@@ -16,7 +16,12 @@ import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
 } from 'src/utils/model/providers.js'
+import {
+  getKimiForCodingApiKey,
+  getKimiForCodingBaseURL,
+} from 'src/utils/model/kimiForCoding.js'
 import { getProxyFetchOptions } from 'src/utils/proxy.js'
+import { getClaudeCodeUserAgent } from 'src/utils/userAgent.js'
 import {
   getIsNonInteractiveSession,
   getSessionId,
@@ -101,10 +106,14 @@ export async function getAnthropicClient({
   const containerId = process.env.CLAUDE_CODE_CONTAINER_ID
   const remoteSessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
   const clientApp = process.env.CLAUDE_AGENT_SDK_CLIENT_APP
+  const apiProvider = getAPIProvider()
   const customHeaders = getCustomHeaders()
   const defaultHeaders: { [key: string]: string } = {
     'x-app': 'cli',
-    'User-Agent': getUserAgent(),
+    'User-Agent':
+      apiProvider === 'kimi'
+        ? (process.env.KIMI_FOR_CODING_USER_AGENT ?? getClaudeCodeUserAgent())
+        : getUserAgent(),
     'X-Claude-Code-Session-Id': getSessionId(),
     ...customHeaders,
     ...(containerId ? { 'x-claude-remote-container-id': containerId } : {}),
@@ -133,7 +142,11 @@ export async function getAnthropicClient({
   logForDebugging('[API:auth] OAuth token check complete')
 
   if (!isClaudeAISubscriber()) {
-    await configureApiKeyHeaders(defaultHeaders, getIsNonInteractiveSession())
+    await configureApiKeyHeaders(
+      defaultHeaders,
+      getIsNonInteractiveSession(),
+      apiKey,
+    )
   }
 
   const resolvedFetch = buildFetch(fetchOverride, source)
@@ -296,6 +309,17 @@ export async function getAnthropicClient({
     // we have always been lying about the return type - this doesn't support batching or models
     return new AnthropicVertex(vertexArgs) as unknown as Anthropic
   }
+  if (apiProvider === 'kimi') {
+    const kimiApiKey = apiKey || getKimiForCodingApiKey()
+    const kimiArgs: ConstructorParameters<typeof Anthropic>[0] = {
+      apiKey: null,
+      authToken: kimiApiKey,
+      baseURL: getKimiForCodingBaseURL(),
+      ...ARGS,
+      ...(isDebugToStdErr() && { logger: createStderrLogger() }),
+    }
+    return new Anthropic(kimiArgs)
+  }
 
   // Determine authentication method based on available tokens
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
@@ -318,10 +342,13 @@ export async function getAnthropicClient({
 async function configureApiKeyHeaders(
   headers: Record<string, string>,
   isNonInteractiveSession: boolean,
+  apiKey?: string,
 ): Promise<void> {
   const token =
-    process.env.ANTHROPIC_AUTH_TOKEN ||
-    (await getApiKeyFromApiKeyHelper(isNonInteractiveSession))
+    getAPIProvider() === 'kimi'
+      ? apiKey || getKimiForCodingApiKey()
+      : process.env.ANTHROPIC_AUTH_TOKEN ||
+        (await getApiKeyFromApiKeyHelper(isNonInteractiveSession))
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }

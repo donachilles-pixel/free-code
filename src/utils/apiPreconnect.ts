@@ -24,7 +24,8 @@
  */
 
 import { getOauthConfig } from '../constants/oauth.js'
-import { isEnvTruthy } from './envUtils.js'
+import { getKimiForCodingBaseURL } from './model/kimiForCoding.js'
+import { getAPIProvider } from './model/providers.js'
 
 let fired = false
 
@@ -33,10 +34,11 @@ export function preconnectAnthropicApi(): void {
   fired = true
 
   // Skip if using a cloud provider — different endpoint + auth
+  const provider = getAPIProvider()
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
+    provider === 'bedrock' ||
+    provider === 'vertex' ||
+    provider === 'foundry'
   ) {
     return
   }
@@ -57,7 +59,9 @@ export function preconnectAnthropicApi(): void {
   // ANTHROPIC_BASE_URL env + USE_STAGING_OAUTH + USE_LOCAL_OAUTH in one lookup.
   // NODE_EXTRA_CA_CERTS no longer a skip — init.ts applied it before this fires.
   const baseUrl =
-    process.env.ANTHROPIC_BASE_URL || getOauthConfig().BASE_API_URL
+    provider === 'kimi'
+      ? getKimiForCodingBaseURL()
+      : process.env.ANTHROPIC_BASE_URL || getOauthConfig().BASE_API_URL
 
   // Fire and forget. HEAD means no response body — the connection is eligible
   // for keep-alive pool reuse immediately after headers arrive. 10s timeout

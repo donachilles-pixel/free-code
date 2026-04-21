@@ -83,6 +83,30 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 free-code
 ```
 
+### Kimi for Coding
+
+Kimi for Coding is supported through its Claude Code-compatible Anthropic
+Messages endpoint. This is not the Moonshot Open Platform API, so do not use
+`https://api.moonshot.ai/v1` or a Moonshot API key for this mode.
+
+```bash
+export CLAUDE_CODE_USE_KIMI_FOR_CODING=1
+export KIMI_API_KEY="sk-kimi-..."
+free-code
+```
+
+The built-in Kimi defaults are:
+
+- Base URL: `https://api.kimi.com/coding/`
+- Model: `kimi-for-coding`
+- Context window: `262144`
+- Max output tokens: `32768`
+
+You can override them with `KIMI_FOR_CODING_BASE_URL`,
+`KIMI_FOR_CODING_MODEL`, or `KIMI_FOR_CODING_API_KEY`. If you prefer Kimi's
+official Claude Code environment variables, `ANTHROPIC_BASE_URL` pointing at
+`https://api.kimi.com/coding/` is auto-detected as Kimi for Coding.
+
 ---
 
 ## Requirements

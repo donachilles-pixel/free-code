@@ -12,6 +12,7 @@ import {
   type CanonicalModelId,
   type ModelKey,
 } from './configs.js'
+import { getKimiForCodingModel } from './kimiForCoding.js'
 import { type APIProvider, getAPIProvider } from './providers.js'
 
 /**
@@ -23,6 +24,13 @@ export type ModelStrings = Record<ModelKey, string>
 const MODEL_KEYS = Object.keys(ALL_MODEL_CONFIGS) as ModelKey[]
 
 function getBuiltinModelStrings(provider: APIProvider): ModelStrings {
+  if (provider === 'kimi') {
+    const model = getKimiForCodingModel()
+    return Object.fromEntries(
+      MODEL_KEYS.map(key => [key, model]),
+    ) as ModelStrings
+  }
+
   const out = {} as ModelStrings
   for (const key of MODEL_KEYS) {
     out[key] = ALL_MODEL_CONFIGS[key][provider]
