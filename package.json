@@ -9,6 +9,7 @@
     "focus": "./cli",
     "focus-code": "./cli",
     "claude": "./cli",
+    "claude-code": "./cli",
     "claude-source": "./cli"
   },
   "engines": {

@@ -100,12 +100,17 @@ Supported launch forms:
 focus-code
 focus
 focus code
+claude
+claude code
+claude-code
 ```
 
 Local symlink intent:
 
 - `~/.local/bin/focus-code -> /Users/jetwang/free-code/cli`
 - `~/.local/bin/focus -> /Users/jetwang/free-code/cli`
+- `~/.local/bin/claude -> /Users/jetwang/free-code/cli`
+- `~/.local/bin/claude-code -> /Users/jetwang/free-code/cli`
 
 Commits:
 
@@ -241,6 +246,9 @@ Recent successful checks:
 bun run build
 focus --version
 focus code --version
+claude --version
+claude code --version
+claude-code --version
 git diff --check
 ```
 
